@@ -4,26 +4,59 @@ const obs = new OBSWebSocket();
 
 async function main() {
   try {
-    // Connessione a OBS WebSocket
-    await obs.connect('ws://localhost:4455', 'mQIa65sm9gZte29s'); // cambia la password se serve
-    console.log('Connesso a OBS WebSocket!');
+    // Connessione
+    await obs.connect('ws://localhost:4455', 'mQIa65sm9gZte29s'); // cambia password se serve
+    console.log('✅ Connesso a OBS WebSocket\n');
 
-    // Ottiene la versione
-    const version = await obs.call('GetVersion');
-    console.log('🔹 Versione OBS:', version.obsVersion);
+    // --- INFO BASE ---
+    const { obsVersion } = await obs.call('GetVersion');
+    console.log(`🔹 Versione OBS: ${obsVersion}`);
 
-    // Ottiene la lista delle scene
-    const scenes = await obs.call('GetSceneList');
-    console.log('Scene disponibili:');
-    scenes.scenes.forEach((scene, i) => {
-      console.log(`  ${i + 1}. ${scene.sceneName}`);
+    const { currentProgramSceneName, scenes } = await obs.call('GetSceneList');
+    console.log('\n🎬 Scene disponibili:');
+    for (const scene of scenes) {
+      console.log(`- ${scene.sceneName}`);
+      // Otteniamo le fonti per ogni scena
+      const { sceneItems } = await obs.call('GetSceneItemList', { sceneName: scene.sceneName });
+      sceneItems.forEach((item) => console.log(`   • ${item.sourceName}`));
+    }
+
+    console.log(`\n👉 Scena attiva: ${currentProgramSceneName}`);
+    console.log('\n📡 In ascolto degli eventi OBS...\n');
+
+    // --- EVENTI ---
+
+    // Cambio di scena
+    obs.on('CurrentProgramSceneChanged', (data) => {
+      console.log(`🎥 Scena cambiata → ${data.sceneName}`);
+    });
+
+    // Avvio/Fine registrazione
+    obs.on('RecordStateChanged', (data) => {
+      if (data.outputActive) {
+        console.log('⏺️ Registrazione avviata');
+      } else {
+        console.log('⏹️ Registrazione fermata');
+      }
+    });
+
+    // Avvio/Fine streaming
+    obs.on('StreamStateChanged', (data) => {
+      if (data.outputActive) {
+        console.log('📡 Streaming avviato');
+      } else {
+        console.log('🛑 Streaming fermato');
+      }
     });
 
     // Disconnessione
-    await obs.disconnect();
-    console.log('Disconnesso da OBS');
+    obs.on('ConnectionClosed', () => {
+      console.log('🔌 Connessione chiusa da OBS');
+      process.exit(0);
+    });
+
   } catch (err) {
-    console.error('Errore:', err);
+    console.error('❌ Errore:', err);
   }
 }
 
