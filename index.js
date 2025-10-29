@@ -5,15 +5,17 @@ const obs = new OBSWebSocket();
 async function main() {
   try {
     // Connessione
-    await obs.connect('ws://localhost:4455', 'mQIa65sm9gZte29s'); // cambia password se serve
-    console.log('✅ Connesso a OBS WebSocket\n');
+    await obs.connect('ws://localhost:4455', 'mQIa65sm9gZte29s');
+    console.log('Connesso a OBS WebSocket');
+
+
 
     // --- INFO BASE ---
     const { obsVersion } = await obs.call('GetVersion');
     console.log(`🔹 Versione OBS: ${obsVersion}`);
 
     const { currentProgramSceneName, scenes } = await obs.call('GetSceneList');
-    console.log('\n🎬 Scene disponibili:');
+    console.log('\nScene disponibili:');
     for (const scene of scenes) {
       console.log(`- ${scene.sceneName}`);
       // Otteniamo le fonti per ogni scena
@@ -21,42 +23,45 @@ async function main() {
       sceneItems.forEach((item) => console.log(`   • ${item.sourceName}`));
     }
 
-    console.log(`\n👉 Scena attiva: ${currentProgramSceneName}`);
-    console.log('\n📡 In ascolto degli eventi OBS...\n');
+    console.log(`\nScena attiva: ${currentProgramSceneName}`);
+    console.log('\nIn ascolto degli eventi OBS...\n');
 
     // --- EVENTI ---
 
-    // Cambio di scena
+    
+    // Cambio scena
     obs.on('CurrentProgramSceneChanged', (data) => {
-      console.log(`🎥 Scena cambiata → ${data.sceneName}`);
+      console.log('Scena cambiata:', data.sceneName);
     });
 
-    // Avvio/Fine registrazione
+    // Stato registrazione
     obs.on('RecordStateChanged', (data) => {
-      if (data.outputActive) {
-        console.log('⏺️ Registrazione avviata');
-      } else {
-        console.log('⏹️ Registrazione fermata');
-      }
+      console.log('Registrazione:', data.outputActive ? 'AVVIATA' : 'FERMATA');
     });
 
-    // Avvio/Fine streaming
+    // Stato streaming
     obs.on('StreamStateChanged', (data) => {
-      if (data.outputActive) {
-        console.log('📡 Streaming avviato');
-      } else {
-        console.log('🛑 Streaming fermato');
-      }
+      console.log('Streaming:', data.outputActive ? 'AVVIATO' : 'FERMATO');
     });
+
+    // Scene items
+    obs.on('SceneItemAdded', (data) => {
+      console.log('Fonte aggiunta:', data.sceneItemId, data.sceneName, data.sourceName);
+    });
+
+    obs.on('SceneItemRemoved', (data) => {
+      console.log('Fonte rimossa:', data.sceneItemId, data.sceneName, data.sourceName);
+    });
+
 
     // Disconnessione
     obs.on('ConnectionClosed', () => {
-      console.log('🔌 Connessione chiusa da OBS');
+      console.log('Connessione chiusa da OBS');
       process.exit(0);
     });
 
   } catch (err) {
-    console.error('❌ Errore:', err);
+    console.error('Errore:', err);
   }
 }
 
